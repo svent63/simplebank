@@ -88,8 +88,9 @@ describe("SimpleBank", () => {
         beforeEach(async () => {
             accounts = await ethers.getSigners()
             connectedContract = await simpleBank.connect(accounts[1])
-            connectedContract.enroll()
-            connectedContract.deposit({ value: ethers.utils.parseEther("0.01") })
+            await connectedContract.enroll()
+            const transactionResponse = await connectedContract.deposit({ value: ethers.utils.parseEther("0.01") })
+            console.log(transactionResponse)
         })
 
         it("reverts with not enough funds available", async () => {
@@ -100,15 +101,14 @@ describe("SimpleBank", () => {
         })
 
         it("emits an event on withdrawal", async () => {
-            await expect(connectedContract.withdraw(ethers.utils.parseEther("0.005"))).to.emit(
-                connectedContract,
-                "LogWithdrawal"
-            )
+            await expect(connectedContract.withdraw(ethers.utils.parseEther("0.005")))
+                .to.emit(connectedContract, "LogWithdrawal")
+                .withArgs(accounts[1].address, ethers.utils.parseEther("0.005"), ethers.utils.parseEther("0.005"))
         })
 
         it("return the new available balance", async () => {
             const newBalance = await connectedContract.withdraw(ethers.utils.parseEther("0.005"))
-            console.log(newBalance)
+            // I'm ignoring all other costs for now, just want a failure with something other than 0
             assert.equal(
                 newBalance.value.toString(),
                 (ethers.utils.parseEther("0.01") - ethers.utils.parseEther("0.005")).toString()

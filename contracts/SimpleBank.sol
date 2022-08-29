@@ -9,10 +9,11 @@ error SimpleBank__NotAClient();
 error SimpleBank__NoBalanceAvailable();
 error SimpleBank__AlreadyEnrolled();
 error SimpleBank__NoEnoughFundsAvailable();
+error SimpleBank__InternalError();
 
 contract SimpleBank {
     /* State Variables */
-    mapping(address => uint256) private balance;
+    mapping(address => uint256) private s_clientBalance;
     mapping(address => bool) private enrolled;
     address public owner = msg.sender;
 
@@ -28,7 +29,7 @@ contract SimpleBank {
         if (enrolled[msg.sender] == false) {
             revert SimpleBank__NotAClient();
         }
-        return balance[msg.sender];
+        return s_clientBalance[msg.sender];
     }
 
     function enroll() public returns (bool) {
@@ -45,9 +46,9 @@ contract SimpleBank {
             revert SimpleBank__NotAClient();
         }
 
-        uint256 currentBalance = balance[msg.sender];
+        uint256 currentBalance = s_clientBalance[msg.sender];
         uint256 newBalance = currentBalance + msg.value;
-        balance[msg.sender] = newBalance;
+        s_clientBalance[msg.sender] = newBalance;
         emit LogDepositMade(msg.sender, msg.value);
         return newBalance;
     }
@@ -57,15 +58,20 @@ contract SimpleBank {
             revert SimpleBank__NotAClient();
         }
 
-        if (withdrawAmount > balance[msg.sender]) {
+        if (withdrawAmount > s_clientBalance[msg.sender]) {
             revert SimpleBank__NoEnoughFundsAvailable();
         }
 
-        console.log(balance[msg.sender]);
-        balance[msg.sender] -= withdrawAmount;
-        console.log(balance[msg.sender]);
-        payable(msg.sender).transfer(withdrawAmount);
-        emit LogWithdrawal(msg.sender, withdrawAmount, balance[msg.sender]);
-        return balance[msg.sender];
+        console.log(msg.sender);
+
+        address payable client = payable(msg.sender);
+        (bool success, ) = client.call{value: withdrawAmount}("");
+        if (!success) {
+            revert SimpleBank__InternalError();
+        }
+        uint256 newBalance = s_clientBalance[msg.sender] - withdrawAmount;
+        s_clientBalance[msg.sender] = newBalance;
+        emit LogWithdrawal(msg.sender, withdrawAmount, s_clientBalance[msg.sender]);
+        return newBalance;
     }
 }
