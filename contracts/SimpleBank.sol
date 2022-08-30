@@ -41,7 +41,7 @@ contract SimpleBank {
         return true;
     }
 
-    function deposit() public payable returns (uint256) {
+    function deposit() public payable {
         if (!enrolled[msg.sender]) {
             revert SimpleBank__NotAClient();
         }
@@ -50,10 +50,9 @@ contract SimpleBank {
         uint256 newBalance = currentBalance + msg.value;
         s_clientBalance[msg.sender] = newBalance;
         emit LogDepositMade(msg.sender, msg.value);
-        return newBalance;
     }
 
-    function withdraw(uint256 withdrawAmount) public returns (uint256) {
+    function withdraw(uint256 withdrawAmount) public {
         if (!enrolled[msg.sender]) {
             revert SimpleBank__NotAClient();
         }
@@ -62,16 +61,16 @@ contract SimpleBank {
             revert SimpleBank__NoEnoughFundsAvailable();
         }
 
-        console.log(msg.sender);
+        // console.log(msg.sender);
 
         address payable client = payable(msg.sender);
+        uint256 currentBalalance = s_clientBalance[client];
+        uint256 newBalance = currentBalalance - withdrawAmount;
         (bool success, ) = client.call{value: withdrawAmount}("");
         if (!success) {
             revert SimpleBank__InternalError();
         }
-        uint256 newBalance = s_clientBalance[msg.sender] - withdrawAmount;
-        s_clientBalance[msg.sender] = newBalance;
+        s_clientBalance[client] = newBalance;
         emit LogWithdrawal(msg.sender, withdrawAmount, s_clientBalance[msg.sender]);
-        return newBalance;
     }
 }
